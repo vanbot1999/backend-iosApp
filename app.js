@@ -1,9 +1,11 @@
+//app.js
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' }); // 设置文件上传的目录
 const app = express();
 const port = 3000;
 
@@ -50,7 +52,32 @@ app.post('/api/register', async (req, res) => {
     }
   });
   
-  
+  // 发帖的路由处理
+app.post('/api/posts', upload.single('image'), async (req, res) => {
+    try {
+        // 如果请求中包含文件，`req.file` 将包含有关文件的信息
+        // `req.body` 将包含文本字段，比如 `title` 和 `content`
+        let imageUrl = null;
+        if (req.file) {
+            imageUrl = req.file.path; // 使用上传文件的路径作为图片URL
+        }
+
+        const post = new BlogPost({
+            title: req.body.title,
+            content: req.body.content,
+            author: req.body.author, // 实际项目中应从认证用户信息获取
+            imageUrl: imageUrl, // 图片路径
+            date: new Date() // 使用 date 而不是 publishDate
+        });        
+
+        const newPost = await post.save(); // 保存帖子到数据库
+        res.status(201).send(newPost); // 返回创建的帖子
+    } catch (error) {
+        console.error('保存帖子时出错:', error);
+        res.status(500).send('服务器错误: ' + error.message);
+    }
+});
+
   app.get('/api/blogs', async (req, res) => {
     try {
       const blogs = await BlogPost.find();
