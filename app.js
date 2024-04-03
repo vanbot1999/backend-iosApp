@@ -132,6 +132,40 @@ app.get('/api/posts/author/:username', async (req, res) => {
     }
 });
 
+// 引入评论模型
+const Comment = require('./models/Comment');
+
+// 创建评论
+app.post('/api/posts/:postId/comments', async (req, res) => {
+    console.log("Received comment data:", req.body);
+    try {
+        const comment = new Comment({
+            content: req.body.content,
+            author: req.body.author,
+            postId: req.params.postId
+        });
+
+        const newComment = await comment.save();
+        console.log("Comment saved:", newComment);
+        res.status(201).json(newComment);
+    } catch (error) {
+        console.error("Error creating comment:", error);
+        res.status(500).json({ message: '创建评论时出错', error: error.message });
+    }
+});
+
+
+// 获取一个帖子的所有评论
+app.get('/api/posts/:postId/comments', async (req, res) => {
+    try {
+        const postId = req.params.postId;
+        const comments = await Comment.find({ postId: postId });
+        res.status(200).json(comments);
+    } catch (error) {
+        res.status(500).json({ message: '获取评论时出错', error: error.message });
+    }
+});
+
 // 启动服务器
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
