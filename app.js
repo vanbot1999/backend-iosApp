@@ -91,6 +91,20 @@ app.post('/api/posts', upload.single('image'), async (req, res) => {
         res.status(500).send('服务器错误: ' + error.message);
     }
 });
+// 删除帖子端点
+app.delete('/api/posts/:postId', async (req, res) => {
+    try {
+        const postId = req.params.postId;
+        const deletedPost = await BlogPost.findByIdAndDelete(postId);
+        if (deletedPost) {
+            res.status(200).send({ message: '帖子删除成功' });
+        } else {
+            res.status(404).send({ message: '未找到要删除的帖子' });
+        }
+    } catch (error) {
+        res.status(500).send('服务器错误: ' + error.message);
+    }
+});
 
 // 修改：确保只有一个对 '/api/blogs' 的 GET 请求处理器
 app.get('/api/blogs', async (req, res) => {
