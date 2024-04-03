@@ -4,37 +4,39 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // 设置文件上传的目录
+const path = require('path');
+
 const app = express();
 const port = 3000;
-const path = require('path');
+
+// 设置文件上传的目录
+const upload = multer({ dest: 'uploads/' });
 
 // 引入模型
 const User = require('./models/user');
-const BlogPost = require('./models/BlogPost');
+const Post = require('./models/Post');
 
 // 配置
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // 配置静态文件服务
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB 连接
 mongoose.connect('mongodb://localhost/myBlogDb', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-}).then(() => console.log('Connected to MongoDB...'))
+})
+.then(() => console.log('Connected to MongoDB...'))
 .catch(err => console.error('Could not connect to MongoDB...', err));
 
-//注册
+// 用户注册
 app.post('/api/register', async (req, res) => {
     try {
-        // 检查用户名是否已经存在
         const existingUsername = await User.findOne({ username: req.body.username });
         if (existingUsername) {
             return res.status(409).send({ message: '用户名已经存在。' });
         }
 
-        // 检查邮箱是否已经存在
         const existingEmail = await User.findOne({ email: req.body.email });
         if (existingEmail) {
             return res.status(409).send({ message: '邮箱已经被使用。' });
@@ -46,6 +48,7 @@ app.post('/api/register', async (req, res) => {
             email: req.body.email,
             password: hashedPassword
         });
+
         const newUser = await user.save();
         res.status(201).send({ message: '用户注册成功', userId: newUser._id });
     } catch (error) {
@@ -53,8 +56,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-
-
+// 用户登录
 app.post('/api/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
@@ -69,33 +71,29 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// 创建新帖子
 app.post('/api/posts', upload.single('image'), async (req, res) => {
     try {
-        let imageUrl = null;
-        if (req.file) {
-            imageUrl = req.file.path;
-        }
-
-        const post = new BlogPost({
+        const post = new Post({
             title: req.body.title,
             content: req.body.content,
             author: req.body.author,
-            imageUrl: imageUrl,
-            date: new Date()
+            imageUrl: req.file ? req.file.path : undefined  // 使用上传的文件路径
         });
 
         const newPost = await post.save();
-        res.status(201).send(newPost);
+        res.status(201).json(newPost);
     } catch (error) {
-        console.error('保存帖子时出错:', error);
-        res.status(500).send('服务器错误: ' + error.message);
+        res.status(500).json({ message: '创建帖子时出错', error: error.message });
     }
 });
-// 删除帖子端点
+
+
+// 删除帖子
 app.delete('/api/posts/:postId', async (req, res) => {
     try {
         const postId = req.params.postId;
-        const deletedPost = await BlogPost.findByIdAndDelete(postId);
+        const deletedPost = await Post.findByIdAndDelete(postId);
         if (deletedPost) {
             res.status(200).send({ message: '帖子删除成功' });
         } else {
@@ -106,22 +104,28 @@ app.delete('/api/posts/:postId', async (req, res) => {
     }
 });
 
-// 修改：确保只有一个对 '/api/blogs' 的 GET 请求处理器
-app.get('/api/blogs', async (req, res) => {
+// 获取所有帖子
+app.get('/api/posts', async (req, res) => {
+    console.log("收到请求，查询参数：", req.query);
+    const excludeAuthor = req.query.excludeAuthor;
+    let query = {};
+    if (excludeAuthor) {
+        query.author = { $ne: excludeAuthor }; // $ne 表示不等于
+    }
+
     try {
-        const { excludeAuthor } = req.query;
-        const query = excludeAuthor ? { author: { $ne: excludeAuthor } } : {};
-        const blogs = await BlogPost.find(query);
-        res.status(200).send(blogs);
+        const posts = await Post.find(query);
+        res.status(200).send(posts);
     } catch (error) {
         res.status(500).send('服务器错误: ' + error.message);
     }
 });
 
-app.get('/api/posts/:username', async (req, res) => {
+// 获取指定作者的帖子
+app.get('/api/posts/author/:username', async (req, res) => {
     try {
         const username = req.params.username;
-        const posts = await BlogPost.find({ author: username });
+        const posts = await Post.find({ author: username });
         res.status(200).send(posts);
     } catch (error) {
         res.status(500).send('服务器错误: ' + error.message);
