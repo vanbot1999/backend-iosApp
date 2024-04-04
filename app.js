@@ -166,6 +166,29 @@ app.get('/api/posts/:postId/comments', async (req, res) => {
     }
 });
 
+// 获取帖子内全部内容
+app.get('/api/posts/:postId/details', async (req, res) => {
+    try {
+        const postId = req.params.postId;
+        console.log(`Fetching details for post with ID: ${postId}`);  // Log the postId being queried
+
+        const post = await Post.findById(postId);
+        if (!post) {
+            console.log('Post not found with ID:', postId);  // Log if the post is not found
+            return res.status(404).send({ message: '未找到帖子' });
+        }
+
+        const comments = await Comment.find({ postId: postId });
+        console.log(`Found ${comments.length} comments for post ID: ${postId}`);  // Log the number of comments found
+
+        res.status(200).json({ ...post.toObject(), comments });
+    } catch (error) {
+        console.error('Error fetching post details:', error);  // Log any errors that occur
+        res.status(500).send('服务器错误: ' + error.message);
+    }
+});
+
+
 // 启动服务器
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
