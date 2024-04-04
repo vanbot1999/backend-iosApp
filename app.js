@@ -29,7 +29,10 @@ mongoose.connect('mongodb://localhost/myBlogDb', {
 .then(() => console.log('Connected to MongoDB...'))
 .catch(err => console.error('Could not connect to MongoDB...', err));
 
-// 用户注册
+// 用户注册 (/api/register)
+// 当用户填写注册表单并提交时，服务器会检查用户名和邮箱是否已经被使用。
+// 如果用户名或邮箱未被使用，服务器会对用户密码进行加密后存储，然后创建新用户。
+// 如果成功创建用户，服务器会返回201状态码和注册成功的消息。
 app.post('/api/register', async (req, res) => {
     try {
         const existingUsername = await User.findOne({ username: req.body.username });
@@ -56,7 +59,11 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// 用户登录
+// 用户登录 (/api/login)
+// 用户提交用户名和密码进行登录。
+// 服务器检查提交的用户名是否存在，如果存在，服务器会比较提交的密码和数据库中的加密密码。
+// 如果用户名和密码匹配，服务器会生成一个JWT令牌返回给客户端，令牌中包含用户ID。
+// 如果用户名或密码不正确，服务器会返回错误消息。
 app.post('/api/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
@@ -71,7 +78,9 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// 创建新帖子
+// 创建新帖子 (/api/posts)
+// 用户可以创建新帖子，必须提供标题、内容和作者，还可以选择上传一张图片。
+// 如果帖子创建成功，服务器会将其保存到数据库，并返回201状态码和帖子数据。
 app.post('/api/posts', upload.single('image'), async (req, res) => {
     try {
         const post = new Post({
@@ -89,7 +98,9 @@ app.post('/api/posts', upload.single('image'), async (req, res) => {
 });
 
 
-// 删除帖子
+// 删除帖子 (/api/posts/:postId)
+// 用户可以通过帖子ID删除特定的帖子。
+// 如果找到并成功删除帖子，服务器会返回成功消息，否则返回未找到帖子的错误消息。
 app.delete('/api/posts/:postId', async (req, res) => {
     try {
         const postId = req.params.postId;
@@ -104,7 +115,9 @@ app.delete('/api/posts/:postId', async (req, res) => {
     }
 });
 
-// 获取所有帖子
+// 获取所有帖子 (/api/posts)
+// 用户可以查询所有帖子。可以选择排除某个作者的帖子。
+// 服务器会根据查询参数返回相应的帖子列表。
 app.get('/api/posts', async (req, res) => {
     console.log("收到请求，查询参数：", req.query);
     const excludeAuthor = req.query.excludeAuthor;
@@ -121,7 +134,9 @@ app.get('/api/posts', async (req, res) => {
     }
 });
 
-// 获取指定作者的帖子
+// 获取指定作者的帖子 (/api/posts/author/:username)
+// 用户可以根据作者用户名查询该作者的所有帖子。
+// 服务器会返回匹配作者的所有帖子。
 app.get('/api/posts/author/:username', async (req, res) => {
     try {
         const username = req.params.username;
@@ -135,7 +150,9 @@ app.get('/api/posts/author/:username', async (req, res) => {
 // 引入评论模型
 const Comment = require('./models/Comment');
 
-// 创建评论
+// 创建评论 (/api/posts/:postId/comments)
+// 用户可以为特定的帖子添加评论。必须提供内容和作者。
+// 如果评论创建成功，服务器会将其保存到数据库，并返回评论数据。
 app.post('/api/posts/:postId/comments', async (req, res) => {
     console.log("Received comment data:", req.body);
     try {
@@ -155,7 +172,9 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
 });
 
 
-// 获取一个帖子的所有评论
+// 获取一个帖子的所有评论 (/api/posts/:postId/comments)
+// 用户可以查询特定帖子的所有评论。
+// 服务器会返回该帖子的所有评论。
 app.get('/api/posts/:postId/comments', async (req, res) => {
     try {
         const postId = req.params.postId;
@@ -166,7 +185,9 @@ app.get('/api/posts/:postId/comments', async (req, res) => {
     }
 });
 
-// 获取帖子内全部内容
+// 获取帖子内全部内容 (/api/posts/:postId/details)
+// 用户可以通过帖子ID获取帖子的详细内容及其所有评论。
+// 如果帖子存在，服务器会返回帖子的所有数据和评论，否则返回未找到帖子的错误消息。
 app.get('/api/posts/:postId/details', async (req, res) => {
     try {
         const postId = req.params.postId;
