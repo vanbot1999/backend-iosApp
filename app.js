@@ -153,24 +153,40 @@ const Comment = require('./models/Comment');
 // 创建评论 (/api/posts/:postId/comments)
 // 用户可以为特定的帖子添加评论。必须提供内容和作者。
 // 如果评论创建成功，服务器会将其保存到数据库，并返回评论数据。
+// 修改创建评论的端点以允许指定父评论
 app.post('/api/posts/:postId/comments', async (req, res) => {
-    console.log("Received comment data:", req.body);
     try {
         const comment = new Comment({
             content: req.body.content,
             author: req.body.author,
-            postId: req.params.postId
+            postId: req.params.postId,
+            parentCommentId: req.body.parentCommentId || null
         });
 
         const newComment = await comment.save();
-        console.log("Comment saved:", newComment);
         res.status(201).json(newComment);
     } catch (error) {
-        console.error("Error creating comment:", error);
         res.status(500).json({ message: '创建评论时出错', error: error.message });
     }
 });
 
+// 删除评论 (/api/posts/:postId/comments/:commentId)
+// 用户可以通过评论ID删除特定的评论。
+// 如果找到并成功删除评论，服务器会返回成功消息，否则返回未找到评论的错误消息。
+app.delete('/api/posts/:postId/comments/:commentId', async (req, res) => {
+    try {
+        const { postId, commentId } = req.params;
+
+        const deletedComment = await Comment.findByIdAndDelete(commentId);
+        if (deletedComment) {
+            res.status(200).send({ message: '评论删除成功' });
+        } else {
+            res.status(404).send({ message: '未找到要删除的评论' });
+        }
+    } catch (error) {
+        res.status(500).send('服务器错误: ' + error.message);
+    }
+});
 
 // 获取一个帖子的所有评论 (/api/posts/:postId/comments)
 // 用户可以查询特定帖子的所有评论。
